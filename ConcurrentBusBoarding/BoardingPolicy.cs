@@ -205,6 +205,15 @@ namespace ConcurrentBusBoarding
             return canAdmit && !boarding;
         }
 
+        // Native vehicle AI already drives past a stop nobody has asked it to make: residents set
+        // RequireStop, and a bus without it advances to the next waypoint. Forcing the request or a
+        // managed session on a bus nobody wants here would undo that, so with skipping on, a bus only
+        // takes part when someone waits for its line or someone aboard leaves here.
+        internal static bool HasStopDemand(bool skipWithoutDemand, int waiting, bool anyoneLeaving)
+        {
+            return !skipWithoutDemand || waiting > 0 || anyoneLeaving;
+        }
+
         // Departure is two-phase, as a real stop is. Phase one accepts passengers. Phase two closes
         // the doors so the cims already climbing aboard can finish, because a bus that never stops
         // admitting new boarders never reaches "all passengers ready".

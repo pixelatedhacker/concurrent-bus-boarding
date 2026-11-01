@@ -157,6 +157,8 @@ namespace ConcurrentBusBoarding
         [ReadOnly] public ComponentLookup<TripSource> m_TripSource;
         [ReadOnly] public ComponentLookup<OutOfControl> m_OutOfControl;
         [ReadOnly] public ComponentLookup<CurrentVehicle> m_CurrentVehicle;
+        [ReadOnly] public ComponentLookup<WaitingPassengers> m_WaitingPassengers;
+        [ReadOnly] public ComponentLookup<PathOwner> m_PathOwner;
         [ReadOnly] public BufferLookup<CarNavigationLane> m_CarNavigationLanes;
         [ReadOnly] public BufferLookup<ConnectedRoute> m_ConnectedRoutes;
         [ReadOnly] public BufferLookup<RouteSegment> m_RouteSegments;
@@ -199,6 +201,8 @@ namespace ConcurrentBusBoarding
                 m_TripSource = system.GetComponentLookup<TripSource>(true),
                 m_OutOfControl = system.GetComponentLookup<OutOfControl>(true),
                 m_CurrentVehicle = system.GetComponentLookup<CurrentVehicle>(true),
+                m_WaitingPassengers = system.GetComponentLookup<WaitingPassengers>(true),
+                m_PathOwner = system.GetComponentLookup<PathOwner>(true),
                 m_CarNavigationLanes = system.GetBufferLookup<CarNavigationLane>(true),
                 m_ConnectedRoutes = system.GetBufferLookup<ConnectedRoute>(true),
                 m_RouteSegments = system.GetBufferLookup<RouteSegment>(true),
@@ -241,6 +245,8 @@ namespace ConcurrentBusBoarding
             m_TripSource.Update(system);
             m_OutOfControl.Update(system);
             m_CurrentVehicle.Update(system);
+            m_WaitingPassengers.Update(system);
+            m_PathOwner.Update(system);
             m_CarNavigationLanes.Update(system);
             m_ConnectedRoutes.Update(system);
             m_RouteSegments.Update(system);

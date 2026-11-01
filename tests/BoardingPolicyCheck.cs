@@ -110,6 +110,14 @@ internal static class BoardingPolicyCheck
             "bus outside available zone does not request a stop");
         Expect(!BoardingPolicy.ShouldRequestStop(true, true),
             "boarding bus does not repeat the stop request");
+        Expect(BoardingPolicy.HasStopDemand(false, 0, false),
+            "with skipping off every eligible bus stops, as before");
+        Expect(!BoardingPolicy.HasStopDemand(true, 0, false),
+            "with skipping on a bus nobody wants passes the stop");
+        Expect(BoardingPolicy.HasStopDemand(true, 1, false),
+            "a waiting cim keeps the stop");
+        Expect(BoardingPolicy.HasStopDemand(true, 0, true),
+            "a leaving passenger keeps the stop");
         Expect(!BoardingPolicy.CanFinishBoarding(99, 100, float.MaxValue, true, false),
             "boarding dwell must finish");
         Expect(!BoardingPolicy.CanFinishBoarding(100, 100, 12f, true, false),

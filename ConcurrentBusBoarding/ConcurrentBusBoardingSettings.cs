@@ -37,6 +37,11 @@ namespace ConcurrentBusBoarding
         [SettingsUISection(MainSection, TransportGroup)]
         public bool EnableConcurrentBoarding { get; set; } = true;
 
+        // Off by default so boarding is unchanged unless the player opts in. Native AI already
+        // passes stops nobody asked for; this only stops the mod forcing a stop on such a bus.
+        [SettingsUISection(MainSection, TransportGroup)]
+        public bool SkipStopsWithoutDemand { get; set; }
+
         [SettingsUISection(MainSection, TransportGroup)]
         [SettingsUISlider(min = 50f, max = 200f, step = 5f, unit = "%")]
         public int PublicTransportAttractiveness { get; set; } = 100;
@@ -131,6 +136,7 @@ namespace ConcurrentBusBoarding
         public override void SetDefaults()
         {
             EnableConcurrentBoarding = true;
+            SkipStopsWithoutDemand = false;
             SettingsVersion = CurrentSettingsVersion;
             PublicTransportAttractiveness = 100;
             BusAttractiveness = 100;
@@ -210,6 +216,10 @@ namespace ConcurrentBusBoarding
                     "Enable concurrent boarding" },
                 { m_Settings.GetOptionDescLocaleID(nameof(ConcurrentBusBoardingSettings.EnableConcurrentBoarding)),
                     "Let a second bus board alongside the first when two are at the same stop. Turn it off to leave every bus entirely to the game while keeping the overlays, zone editor and stuck-stop repair. Takes effect immediately, so you can compare your city with it on and off." },
+                { m_Settings.GetOptionLabelLocaleID(nameof(ConcurrentBusBoardingSettings.SkipStopsWithoutDemand)),
+                    "Let buses pass stops with no demand" },
+                { m_Settings.GetOptionDescLocaleID(nameof(ConcurrentBusBoardingSettings.SkipStopsWithoutDemand)),
+                    "When two buses meet at a stop, only make a bus stop if someone is waiting for its line or someone on board gets off there. Other buses are left to the game, which drives past stops nobody has asked for. Takes effect immediately." },
                 { m_Settings.GetOptionLabelLocaleID(nameof(ConcurrentBusBoardingSettings.BusAttractiveness)),
                     "Extra bus attractiveness" },
                 { m_Settings.GetOptionDescLocaleID(nameof(ConcurrentBusBoardingSettings.BusAttractiveness)),

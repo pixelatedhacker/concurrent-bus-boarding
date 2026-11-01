@@ -145,6 +145,7 @@ namespace ConcurrentBusBoarding
         private const uint ReportFrames = 4096u;
         private const int ContendedVisits = 0;
         private const int SingleBusVisits = 1;
+        private const int PassedWithoutDemand = 2;
 
         private EntityQuery m_Buses;
         private EntityQuery m_Stops;
@@ -183,7 +184,7 @@ namespace ConcurrentBusBoarding
             m_SimulationSystem = World.GetOrCreateSystemManaged<SimulationSystem>();
             m_Lookups = SimulationLookups.Create(this);
             m_Active = GetComponentLookup<ConcurrentBoardingActive>(false);
-            m_Counters = new NativeArray<int>(2, Allocator.Persistent);
+            m_Counters = new NativeArray<int>(3, Allocator.Persistent);
             RequireForUpdate(m_Buses);
             RequireForUpdate(m_Stops);
         }
@@ -213,7 +214,8 @@ namespace ConcurrentBusBoarding
                 m_PreviousJob.Complete();
                 Mod.LogInfo(
                     $"Concurrent boarding engagement: contended stop visits={m_Counters[ContendedVisits]}, " +
-                    $"single-bus visits left to native AI={m_Counters[SingleBusVisits]}.");
+                    $"single-bus visits left to native AI={m_Counters[SingleBusVisits]}, " +
+                    $"no-demand checks left to native AI={m_Counters[PassedWithoutDemand]}.");
             }
 
             m_Lookups.Update(this);
@@ -226,7 +228,8 @@ namespace ConcurrentBusBoarding
                 m_Active = m_Active,
                 m_Counters = m_Counters,
                 m_Frame = frame,
-                m_Turn = m_Turn
+                m_Turn = m_Turn,
+                m_SkipWithoutDemand = Mod.Settings != null && Mod.Settings.SkipStopsWithoutDemand
             }.Schedule(JobHandle.CombineDependencies(Dependency, listed));
             buses.Dispose(handle);
             m_PreviousJob = handle;
@@ -246,6 +249,7 @@ namespace ConcurrentBusBoarding
             public NativeArray<int> m_Counters;
             public uint m_Frame;
             public uint m_Turn;
+            public bool m_SkipWithoutDemand;
 
             public void Execute()
             {
@@ -422,6 +426,15 @@ namespace ConcurrentBusBoarding
                         candidateLength, BoardingHelpers.GetZoneLength(zone), true);
                     if (!canAdmit)
                         continue;
+
+                    // Leave the bus to native AI, which passes a stop nobody has asked for. It may
+                    // still be held behind a boarding bus by ordinary traffic, but not by this mod.
+                    if (m_SkipWithoutDemand &&
+                        !BoardingHelpers.HasStopDemand(ref m_Lookups, bus, stop, m_Lookups.m_Target[bus].m_Target))
+                    {
+                        m_Counters[PassedWithoutDemand]++;
+                        continue;
+                    }
 
                     VehiclePublicTransport transport = m_Lookups.m_PublicTransport[bus];
                     if (BoardingPolicy.ShouldRequestStop(
@@ -2043,6 +2056,41 @@ namespace ConcurrentBusBoarding
                 !data.IsDeleted(stop) &&
                 !data.IsTemp(stop) &&
                 data.HasBoardingVehicle(stop);
+        }
+
+        // How far into a passenger's remaining path to look for the waypoint it leaves at. Its next
+        // stop on this bus is near the front; a long scan would cost per passenger per bus.
+        private const int LeavingScanElements = 8;
+
+        // Demand for this bus at this stop: cims waiting for its line, or a passenger whose path
+        // leaves the bus here. A passenger whose path cannot be read counts as leaving, so a gap in
+        // what is known never carries someone past their stop.
+        internal static bool HasStopDemand(ref SimulationLookups data, Entity bus, Entity stop, Entity waypoint)
+        {
+            int waiting = data.m_WaitingPassengers.TryGetComponent(waypoint, out WaitingPassengers passengers)
+                ? passengers.m_Count
+                : 0;
+            return BoardingPolicy.HasStopDemand(true, waiting, IsAnyoneLeaving(ref data, bus, stop, waypoint));
+        }
+
+        private static bool IsAnyoneLeaving(ref SimulationLookups data, Entity bus, Entity stop, Entity waypoint)
+        {
+            if (!data.m_Passengers.TryGetBuffer(bus, out DynamicBuffer<Passenger> passengers))
+                return false;
+            foreach (Passenger passenger in passengers)
+            {
+                if (!data.m_PathOwner.TryGetComponent(passenger.m_Passenger, out PathOwner owner) ||
+                    !data.m_PathElements.TryGetBuffer(passenger.m_Passenger, out DynamicBuffer<PathElement> path))
+                    return true;
+                int end = math.min(path.Length, owner.m_ElementIndex + LeavingScanElements);
+                for (int i = math.max(owner.m_ElementIndex, 0); i < end; i++)
+                {
+                    Entity target = path[i].m_Target;
+                    if (target == waypoint || target == stop)
+                        return true;
+                }
+            }
+            return false;
         }
 
         internal static int GetPassengerCount(ref SimulationLookups data, Entity vehicle)

@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Add **Let buses pass stops with no demand**, off by default. When two buses meet at a stop, the
+  mod normally makes each one stop. With this on, a bus only stops if someone is waiting for its
+  line or someone on board gets off there; any other bus is left to the game, which already drives
+  past stops nobody has asked for. The engagement log line counts how often a bus was left to the game this way.
+
 ## 1.7.2 - 2026-09-24
 
 Removes most of the mod's frame-time cost in large cities. Boarding behaves the same.
