@@ -2082,6 +2082,12 @@ namespace ConcurrentBusBoarding
                 if (!data.m_PathOwner.TryGetComponent(passenger.m_Passenger, out PathOwner owner) ||
                     !data.m_PathElements.TryGetBuffer(passenger.m_Passenger, out DynamicBuffer<PathElement> path))
                     return true;
+                // Native resident AI (CurrentVehicleTesting) reads the exit waypoint at
+                // m_ElementIndex + 1 and requests the stop whenever the path is too short to name
+                // one. A path being recomputed may not name it yet either.
+                if (path.Length < owner.m_ElementIndex + 2 ||
+                    (owner.m_State & (PathFlags.Pending | PathFlags.Obsolete)) != 0)
+                    return true;
                 int end = math.min(path.Length, owner.m_ElementIndex + LeavingScanElements);
                 for (int i = math.max(owner.m_ElementIndex, 0); i < end; i++)
                 {
